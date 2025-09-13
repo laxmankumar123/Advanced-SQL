@@ -53,36 +53,129 @@ mysql> select * from marks;
 +------------+---------+-------+
 18 rows in set (0.003 sec)
 
+Q1 — Find the student(s) who scored the highest total marks in their department
+✅ Solution 1 (Using Window Function)
+WITH t AS (
+    SELECT 
+        student_name,
+        s.dept_id,
+        dept_name,
+        SUM(score) AS mx
+    FROM students1 AS s
+    LEFT JOIN departments1 AS d 
+        ON s.dept_id = d.dept_id
+    LEFT JOIN marks m 
+        ON m.student_id = s.student_id
+    GROUP BY student_name, s.dept_id, dept_name
+),
+t2 AS (
+    SELECT 
+        *,
+        DENSE_RANK() OVER (
+            PARTITION BY dept_id 
+            ORDER BY mx DESC
+        ) AS rnk
+    FROM t
+)
+SELECT *
+FROM t2
+WHERE rnk = 1;
 
-Q1- Find the student(s) who scored the highest total marks in their department.
+✅ Solution 2 (Using Joins + Aggregate Function)
+SELECT 
+    student_name,
+    s.dept_id,
+    dept_name,
+    SUM(score) AS mx
+FROM students1 AS s
+LEFT JOIN departments1 AS d 
+    ON s.dept_id = d.dept_id
+LEFT JOIN marks m 
+    ON m.student_id = s.student_id
+GROUP BY student_name, s.dept_id, dept_name
+HAVING SUM(score) = (
+    SELECT MAX(ttl)
+    FROM (
+        SELECT 
+            s2.student_id,
+            SUM(score) AS ttl
+        FROM students1 AS s2
+        LEFT JOIN departments1 AS d2 
+            ON s2.dept_id = d2.dept_id
+        LEFT JOIN marks m2 
+            ON m2.student_id = s2.student_id
+        WHERE d2.dept_name = d.dept_name
+        GROUP BY s2.student_id
+    ) AS t
+);
 
-Solution 1-> Used Window function 
+Q2 — Find the student(s) who scored the 2nd highest total marks in their department
+✅ Solution 1 (Using Window Function)
+WITH t AS (
+    SELECT 
+        student_name,
+        s.dept_id,
+        dept_name,
+        SUM(score) AS mx
+    FROM students1 AS s
+    LEFT JOIN departments1 AS d 
+        ON s.dept_id = d.dept_id
+    LEFT JOIN marks m 
+        ON m.student_id = s.student_id
+    GROUP BY student_name, s.dept_id, dept_name
+),
+t2 AS (
+    SELECT 
+        *,
+        DENSE_RANK() OVER (
+            PARTITION BY dept_id 
+            ORDER BY mx DESC
+        ) AS rnk
+    FROM t
+)
+SELECT *
+FROM t2
+WHERE rnk = 2;
 
-with t2 as (with t as (select student_name,s.dept_id, dept_name,sum(score) as mx from students1 as s left join departments1 as d on s.dept_id=d.dept_id left join marks m on m.student_id=s.student_id group by 1,2) select *, DENSE_RANK() OVER (PARTITION BY dept_id order BY mx DESC) as rnk from t) select * from t2  where rnk=1;
-
-
-
-Solution 2-> Used basic joins  and  aggregate function
-
-select student_name,s.dept_id, dept_name,sum(score) as mx from students1 as s left join departments1 as d on s.dept_id=d.dept_id left join marks m on m.student_id=s.student_id group by 1,2,3 having sum(score)=(select max(ttl) from (select s2.student_id,sum(score) as ttl from students1 as s2 left join departments1 as d2 on s2.dept_id=d2.dept_id left join marks m2 on m2.student_id=s2.student_id where d2.dept_name=d.dept_name  group by 1) as t)
-
-
-Q2 —> Find the student(s) who scored the 2nd highest total marks in their department.
-
-Solution 1-> Used Window function 
-
-with t2 as (with t as (select student_name,s.dept_id, dept_name,sum(score) as mx from students1 as s left join departments1 as d on s.dept_id=d.dept_id left join marks m on m.student_id=s.student_id group by 1,2) select *, DENSE_RANK() OVER (PARTITION BY dept_id order BY mx DESC) as rnk from t) select * from t2  where rnk=2;
-
-
-Solution 2-> Used basic joins  and  aggregate function
-
-select student_name,s.dept_id, dept_name,sum(score) as mx from students1 as s left join departments1 as d on s.dept_id=d.dept_id left join marks m on m.student_id=s.student_id group by 1,2,3 having sum(score)=(select max(ttl) from (select s2.student_id,sum(score) as ttl from students1 as s2 left join departments1 as d2 on s2.dept_id=d2.dept_id left join marks m2 on m2.student_id=s2.student_id where d2.dept_name=d.dept_name group by 1 having sum(score)<( select max(ttl) from (select s3.student_id,sum(score) as ttl from students1 as s3 left join departments1 as d3 on s3.dept_id=d3.dept_id left join marks m3 on m3.student_id=s3.student_id where d3.dept_name=d.dept_name group by 1) as t)) as t);
-
-
-
-
-
-
-
-
-
+✅ Solution 2 (Using Joins + Aggregate Function)
+SELECT 
+    student_name,
+    s.dept_id,
+    dept_name,
+    SUM(score) AS mx
+FROM students1 AS s
+LEFT JOIN departments1 AS d 
+    ON s.dept_id = d.dept_id
+LEFT JOIN marks m 
+    ON m.student_id = s.student_id
+GROUP BY student_name, s.dept_id, dept_name
+HAVING SUM(score) = (
+    SELECT MAX(ttl)
+    FROM (
+        SELECT 
+            s2.student_id,
+            SUM(score) AS ttl
+        FROM students1 AS s2
+        LEFT JOIN departments1 AS d2 
+            ON s2.dept_id = d2.dept_id
+        LEFT JOIN marks m2 
+            ON m2.student_id = s2.student_id
+        WHERE d2.dept_name = d.dept_name
+        GROUP BY s2.student_id
+        HAVING SUM(score) < (
+            SELECT MAX(ttl)
+            FROM (
+                SELECT 
+                    s3.student_id,
+                    SUM(score) AS ttl
+                FROM students1 AS s3
+                LEFT JOIN departments1 AS d3 
+                    ON s3.dept_id = d3.dept_id
+                LEFT JOIN marks m3 
+                    ON m3.student_id = s3.student_id
+                WHERE d3.dept_name = d.dept_name
+                GROUP BY s3.student_id
+            ) AS t
+        )
+    ) AS t
+);
