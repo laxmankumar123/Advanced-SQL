@@ -1,4 +1,7 @@
-------SQL Notes-----------
+# 📘 SQL Notes
+
+## Students Table
+```sql
 mysql> select * from students1;
 +------------+--------------+---------+---------------+
 | student_id | student_name | dept_id | year_of_study |
